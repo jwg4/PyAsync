@@ -1,14 +1,16 @@
 import core
-from core import await, await_all, await_first, bind2, bind_all, chain_all, bind_each, chain_each, Deferred, Queue, start, select, fold, defined, defined_list, join, disjoin
+from core import *
+import network 
 
 ## Here comes the syntactic sugar ##
 
-b = core.Infix(lambda a,f: Deferred.bind(a,f))
-c = core.Infix(lambda a,f: Deferred.chain(a,f))
+b = core.Infix(lambda a,f: bind(a,f))
+c = core.Infix(lambda a,f: chain(a,f))
 ba = core.Infix(lambda d,f: bind_all(d,f))
 be = core.Infix(lambda d,f: bind_each(d,f))
 ca = core.Infix(lambda d,f: chain_all(d,f))
 ce = core.Infix(lambda d,f: chain_each(d,f))
+boa = core.Infix(lambda d,f: bind_or_apply(d,f))
 
 ## Only export these ##
 __all__ = [
@@ -16,21 +18,26 @@ __all__ = [
     'await_all',
     'await_first',
     'bind2',
+    'bind',
+    'chain',
     'bind_all',
     'chain_all',
     'bind_each',
     'chain_each',
-    'Deferred',
+    'deferred',
     'b',
     'c',
     'be',
     'ba',
     'ce',
     'ca',
-    'start',
+    'go',
+    'shutdown',
+    'never_returns',
     'fold',
-    'defined',
-    'defined_list',
+    'determined',
+    'determined_list',
     'join',
-    'disjoin'
+    'disjoin',
+    'bind_or_apply'
 ]

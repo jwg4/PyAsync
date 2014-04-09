@@ -1,13 +1,38 @@
-# $Id: core.py 34068 2014-03-25 12:19:05Z alanm $
+# $Id: core.py 34452 2014-04-08 18:18:59Z alanm $
 import threading
 import concurrent.futures        
 import Queue as Q
 import traceback
+import gc
+import scheduler
+import signal
+from raw_deferred import Raw_Deferred
 __version__ = '$Rev$'
 
-_scheduler = None
-#TODO: auto-detect some metric
-DEFAULT_THREADS = 200
+_scheduler = scheduler.Scheduler()
+
+def shutdown():
+    global _scheduler
+    print "shutting down"
+    if _scheduler is not None:
+        _scheduler.shutdown()
+    _scheduler = None
+
+def shutdown_on_signal(signum=None,frame=None):
+    shutdown()
+
+def go(threads=scheduler.DEFAULT_THREADS):
+    global _scheduler 
+    signal.signal(signal.SIGALRM,shutdown_on_signal)
+    signal.signal(signal.SIGHUP,shutdown_on_signal)
+    signal.signal(signal.SIGINT,shutdown_on_signal)
+    if _scheduler is None:
+        _scheduler = scheduler.Scheduler(threads)
+    _scheduler.update_threads(threads)
+    return _scheduler.go()
+
+def never_returns(threads=scheduler.DEFAULT_THREADS):
+    return go(threads).result()
 
 class Infix:
     def __init__(self, function):
@@ -23,61 +48,49 @@ class Infix:
     def __call__(self, value1, value2):
         return self.function(value1, value2)
 
-def start(threads=DEFAULT_THREADS):
-    global _scheduler
-    if not _scheduler:
-        _scheduler = concurrent.futures.ThreadPoolExecutor(max_workers=threads)
+def deferred(f=None):
+    d = Raw_Deferred(f)
+    _scheduler.submit_job(d)
+    return d
 
-def shutdown():
-    global _scheduler
-    _scheduler.shutdown()
-    _scheduler = None
+def determined(x):
+    """Make a deferred from a value x, bypassing the scheduler. x will never be called.
+    """
+    d = Raw_Deferred()
+    d.determine(x)
+    return d
 
-class Deferred:
-  
-    def __init__(self,function):
-        self._f = function
-        self._future = _scheduler.submit(function)
+def determined_list(l):
+    return [determined(x) for x in l]
 
-    def result_opt(self):
-        if not self._future.done():
-            return None
+def auto_defer(o):
+    """Auto-deferring of objects and functions"""
+    if isinstance(o, Raw_Deferred):
+        r = o
+    else:
+        if hasattr(o, '__call__'):
+            r = deferred(o)
         else:
-            return self._future
+            r = determined(o)
+    return r
 
-    def abort():
-        self._future.cancel()
+def await(d):
+    return d.await_result()
 
-    #'a Def -> 'a
-    def await_result(self):
-        try:
-            r = self._future.result()
-            return r
-        except Exception as e:
-            print "Exception " + str(e) + " in module " + str(self._f.__module__) + ", function " + self._f.__name__
-            print str(self._f.__code__.co_filename) + ", line "  + str(self._f.__code__.co_firstlineno)
-            raise
-  
-    #'a Def -> (f: 'a -> 'b) -> 'b
-    def bind(self,function):
-        return function(self.await_result())
+#'a Def -> (f: 'a -> 'b) -> 'b
+def bind(d,f):
+    return f(await(d))
 
-    #'a Def -> (f: 'a -> 'b) -> 'b Def
-    def chain(self,function):
-        return Deferred(lambda: self.bind(function))
-
-def defined(x):
-    return Deferred(lambda: x)
-
-def defined_list(l):
-    return [defined(x) for x in l]
-
-def await(deferred):
-    return deferred.await_result()
+#'a Def -> (f: 'a -> 'b) -> 'b Def
+def chain(d,f):
+    d2 = Raw_Deferred(lambda d=d,f=f: f(d.result))
+    #using a callback does not exhaust threads waiting
+    d.add_callback(lambda v,d2=d2: _scheduler.submit_job(d2))
+    return d2
 
 #'a Def list -> 'a list
 def await_all(deferreds):
-    return [deferred.await_result() for deferred in deferreds]
+    return [await(d) for d in deferreds]
 
 def await_first(deferreds):
     if len(deferreds) < 1:
@@ -99,7 +112,7 @@ def bind_all(deferreds,function):
 
 #'a Def list -> (f: 'a -> 'b list) -> 'b list Def
 def chain_all(deferreds,function):
-    return Deferred(lambda: bind_list(deferreds,function))
+    return deferred(lambda: bind_all(deferreds,function))
 
 #'a Def list -> (f: 'a -> 'b) -> 'b list
 def bind_each(deferreds,function):
@@ -118,12 +131,18 @@ def fold(deferreds,init,function):
 
 #'a list Def -> 'a Def list
 def disjoin(deferred):
-    return deferred.bind(defined_list)
+    return deferred.bind(determined_list)
     
 #'a Def list -> 'a list Def
 def join(deferreds):
-    return defined(await_all(deferreds))
-    
+    return chain_all(deferreds,lambda x: x)
+
+def bind_or_apply(maybe_deferred,function):
+    if isinstance(maybe_deferred, Raw_Deferred):
+        return maybe_deferred.bind(function)
+    else:
+        return function(maybe_deferred)
+
 def select(deferreds):
     if len(deferreds) < 1:
         return
@@ -142,8 +161,8 @@ class Queue:
         self._objects = Q.Queue()
 
     def put(self,val):
-        return Deferred(lambda val=val: self._objects.put(val))
+        return deferred(lambda val=val: self._objects.put(val))
 
     def get(self):
-        return Deferred(lambda: self._objects.get(True))
+        return deferred(lambda: self._objects.get(True))
     
