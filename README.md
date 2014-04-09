@@ -1,4 +1,4 @@
 PyAsync
 =======
 
-Monadic Async library for python based on gevent
+Monadic Asynchronous (deferred execution) library for python based on concurrent.futures
