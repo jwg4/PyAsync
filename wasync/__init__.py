@@ -39,5 +39,7 @@ __all__ = [
     'determined_list',
     'join',
     'disjoin',
-    'bind_or_apply'
+    'bind_or_apply',
+    'sleep',
+    'every'
 ]

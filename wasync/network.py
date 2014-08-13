@@ -1,4 +1,4 @@
-# $Id: network.py 34452 2014-04-08 18:18:59Z alanm $
+# $Id: network.py 35043 2014-05-12 16:10:37Z alanm $
 import socket as S
 from wasync import *
 from collections import namedtuple
@@ -15,15 +15,15 @@ class CharacterServer:
         self._s = S.socket(S.AF_INET, S.SOCK_STREAM)
         self._terminated = False
         def terminate(ignored=True):
-            print 'Terminating'
+            #print 'Terminating'
             self._terminated=True
-            print 'sending quit signals to data loops'
+            #print 'sending quit signals to data loops'
             [x.abort() for x in self._data_loops]
-            print 'sending quit signal to main loop'
+            #print 'sending quit signal to main loop'
             self._loop.abort()
-            print 'sent quit signals'
-            print 'foo'
+            #print 'sent quit signals'
         teardown.chain(terminate)
+        #print 'termination trigger ready'
 
     def go(self):
         #just let any exceptions bubble up
@@ -32,9 +32,9 @@ class CharacterServer:
         #let it run in the background
         self._loop = listen_d.chain(self.infinite_loop)
         self._loop.chain(lambda _ : self._s.close())
-        def w(x):
-            print x
-        self._loop.chain(lambda _ : w("main loop has finished"))
+        #def w(x):
+        #    print x
+        #self._loop.chain(lambda _ : w("main loop has finished"))
         return self._loop
 
     def infinite_loop(self,ignored=True):

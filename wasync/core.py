@@ -1,4 +1,4 @@
-# $Id: core.py 34452 2014-04-08 18:18:59Z alanm $
+# $Id: core.py 35043 2014-05-12 16:10:37Z alanm $
 import threading
 import concurrent.futures        
 import Queue as Q
@@ -154,6 +154,15 @@ def select(deferreds):
         d.chain(lambda v: helper(v))
     while(closure['left'] > 0 or not closure['values'].empty()):
         yield closure['values'].get()
+
+def sleep(time):
+    threading.sleep(time)
+    return defined(None)
+
+def every(time,f):
+    def loop():
+        d = sleep(time).chain(f)
+        d.chain(loop)
 
 class Queue:
 
