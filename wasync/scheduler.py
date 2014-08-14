@@ -4,11 +4,12 @@ import concurrent.futures
 import Queue as SyncQueue
 
 #we absolutely want all instances of wasync.Scheduler to talk to the same concurrent.futures
-DEFAULT_THREADS = 200
+MIN_THREADS = 20
+MAX_THREADS = 2048
 POLLING_CYCLE = 0.01
 
 class Scheduler():
-    def __init__(self,threads = DEFAULT_THREADS):
+    def __init__(self,threads = MIN_THREADS):
         self.update_threads(threads)
         self._job_queue = SyncQueue.Queue()
 
@@ -37,7 +38,19 @@ class Scheduler():
             print str(job.function.__code__.co_filename) + ", line "  + str(job.function.__code__.co_firstlineno)
             raise
 
+    def adjust_slot_count(self,slot_count):
+        self._slots = slot_count
+        self._futures_scheduler._max_workers = slot_count
+        self._futures_scheduler._adjust_thread_count()
+
+    def _check_thread_pool_size(self):
+        if len(self._futures_scheduler._threads) < self._slots / 3:
+            self.adjust_slot_count(max(self._slots / 2, MIN_THREADS))
+        if len(self._futures_scheduler._threads) > 3 * self._slots / 4:
+            self.adjust_slot_count(min(self._slots * 2, MAX_THREADS))
+
     def run_job(self,job):
+        self._check_thread_pool_size()
         self._slots -= 1
         future = self._futures_scheduler.submit(job.function)
         future.add_done_callback(lambda result, job=job: self.after_job(result,job))

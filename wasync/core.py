@@ -21,7 +21,7 @@ def shutdown():
 def shutdown_on_signal(signum=None,frame=None):
     shutdown()
 
-def go(threads=scheduler.DEFAULT_THREADS):
+def go(threads=scheduler.MIN_THREADS):
     global _scheduler 
     signal.signal(signal.SIGALRM,shutdown_on_signal)
     signal.signal(signal.SIGHUP,shutdown_on_signal)
@@ -31,7 +31,7 @@ def go(threads=scheduler.DEFAULT_THREADS):
     _scheduler.update_threads(threads)
     return _scheduler.go()
 
-def never_returns(threads=scheduler.DEFAULT_THREADS):
+def never_returns(threads=scheduler.MIN_THREADS):
     return go(threads).result()
 
 class Infix:
