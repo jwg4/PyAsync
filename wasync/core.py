@@ -1,4 +1,4 @@
-# $Id: core.py 35043 2014-05-12 16:10:37Z alanm $
+# $Id: core.py 37114 2014-08-20 11:18:43Z stuartf $
 import threading
 import concurrent.futures        
 import Queue as Q
@@ -8,12 +8,14 @@ import scheduler
 import signal
 from raw_deferred import Raw_Deferred
 __version__ = '$Rev$'
+import sys
 
-_scheduler = scheduler.Scheduler()
+
+_scheduler = None
+_go_future = None
 
 def shutdown():
     global _scheduler
-    print "shutting down"
     if _scheduler is not None:
         _scheduler.shutdown()
     _scheduler = None
@@ -21,18 +23,20 @@ def shutdown():
 def shutdown_on_signal(signum=None,frame=None):
     shutdown()
 
-def go(threads=scheduler.MIN_THREADS):
+def go(threads = scheduler.MIN_THREADS, debug = None):
     global _scheduler 
-    signal.signal(signal.SIGALRM,shutdown_on_signal)
-    signal.signal(signal.SIGHUP,shutdown_on_signal)
+    global _go_future
     signal.signal(signal.SIGINT,shutdown_on_signal)
+    if sys.platform.startswith('linux'):
+        signal.signal(signal.SIGALRM,shutdown_on_signal)
+        signal.signal(signal.SIGHUP,shutdown_on_signal)
     if _scheduler is None:
-        _scheduler = scheduler.Scheduler(threads)
-    _scheduler.update_threads(threads)
-    return _scheduler.go()
+        _scheduler = scheduler.Scheduler(threads,debug)
+        _go_future = _scheduler.go(debug)
+    return _go_future
 
-def never_returns(threads=scheduler.MIN_THREADS):
-    return go(threads).result()
+def never_returns(threads = scheduler.MIN_THREADS, debug = None):
+    return go(threads,debug).result()
 
 class Infix:
     def __init__(self, function):
@@ -85,8 +89,13 @@ def bind(d,f):
 def chain(d,f):
     d2 = Raw_Deferred(lambda d=d,f=f: f(d.result))
     #using a callback does not exhaust threads waiting
+    d2.add_blocker(d)
     d.add_callback(lambda v,d2=d2: _scheduler.submit_job(d2))
     return d2
+#        n = Raw_Deferred(None)
+#        #this is OK because it runs inside the worker thread
+#        self.add_callback(lambda v=self : n.determine(f(v.result)))
+#        return n
 
 #'a Def list -> 'a list
 def await_all(deferreds):

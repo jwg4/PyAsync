@@ -1,4 +1,4 @@
-# $Id: raw_deferred.py 34456 2014-04-08 18:27:00Z eda $
+# $Id: raw_deferred.py 37041 2014-08-18 13:32:15Z alanm $
 import core
 import threading
 
@@ -11,10 +11,21 @@ class Raw_Deferred:
         self.callbacks = []
         self.result = None
         self.determination = threading.Event()
+        self.blockers = []
 
     def determine(self,val):
         self.result = val
         self.determination.set()
+
+    def is_blocked(self):
+        if len(self.blockers) == 0:
+            return False
+        else:
+            blocked = False
+            for b in self.blockers:
+                if isinstance(b,Raw_Deferred):
+                    if b.is_blocked():
+                        blocked = True
 
     def add_callback(self,f):
         if self.determination.is_set():
@@ -22,15 +33,18 @@ class Raw_Deferred:
         else:
             self.callbacks.append(f)
 
-    def result_opt(self):
+    def add_blocker(self,d):
+        self.blockers.append(d)
+        
+    def peek_opt(self):
         if not self.determination.is_set():
             return None
         else:
             return self.result
 
     def await(self):
-            self.determination.wait()
-            return self.result
+        self.determination.wait()
+        return self.result
 
     def await_result(self):
         return self.await()
