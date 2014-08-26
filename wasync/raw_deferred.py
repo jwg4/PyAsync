@@ -1,4 +1,4 @@
-# $Id: raw_deferred.py 37041 2014-08-18 13:32:15Z alanm $
+# $Id: raw_deferred.py 37196 2014-08-26 14:23:04Z alanm $
 import core
 import threading
 
@@ -16,6 +16,9 @@ class Raw_Deferred:
     def determine(self,val):
         self.result = val
         self.determination.set()
+
+    def is_determined(self):
+        return self.determination.is_set()
 
     def is_blocked(self):
         if len(self.blockers) == 0:

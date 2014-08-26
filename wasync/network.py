@@ -15,10 +15,15 @@ class CharacterServer:
         self._s = S.socket(S.AF_INET, S.SOCK_STREAM)
         self._terminated = False
         def terminate(ignored=True):
+            print 'Terminating'
             self._terminated=True
+            print 'sending quit signals to data loops'
             [x.abort() for x in self._data_loops]
+            print 'sending quit signal to main loop'
             self._loop.abort()
+            print 'sent quit signals'
         teardown.chain(terminate)
+        print 'termination trigger ready'
 
     def go(self):
         #just let any exceptions bubble up

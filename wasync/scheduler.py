@@ -6,7 +6,7 @@ import Queue as SyncQueue
 #we absolutely want all instances of wasync.Scheduler to talk to the same concurrent.futures
 MIN_THREADS = 20
 MAX_THREADS = 500
-POLLING_CYCLE = 0.1
+POLLING_CYCLE = 0.01
 THREAD_COLLECTION_CYCLE = 15
 
 class Worker(threading.Thread):
