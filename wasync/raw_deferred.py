@@ -11,9 +11,18 @@ class Raw_Deferred:
         self.result = None
         self.determination = threading.Event()
         self.blockers = []
+        self.exc_info = None
 
     def determine(self,val):
+        """In the normal flow, realise the value of the promise"""
         self.result = val
+        self.determination.set()
+
+    def determine_exception(self,exc_info):
+        """Something threw an exception in the code thunk. This does not mean wasync is
+        broken, but rather that the code running inside it threw."""
+        self.result = None
+        self.exc_info = exc_info
         self.determination.set()
 
     def is_determined(self):
@@ -29,11 +38,18 @@ class Raw_Deferred:
                     if b.is_blocked():
                         blocked = True
 
-    def add_callback(self,f):
+    def add_callback_f(self,f):
+        raise Exception("deprecated")
+
+    def add_callback(self,d,scheduler):
+        """Hang a callback onto this deferred"""
+        if not isinstance(d, Raw_Deferred):
+            raise Exception("new usage model requires Raw_Deferred callbacks")
         if self.determination.is_set():
-            f(self.result)
+            #all other callbacks have been already scheduled
+            scheduler.submit_job(d)
         else:
-            self.callbacks.append(f)
+            self.callbacks.append(d)
 
     def add_blocker(self,d):
         self.blockers.append(d)
@@ -42,11 +58,17 @@ class Raw_Deferred:
         if not self.determination.is_set():
             return None
         else:
-            return self.result
+            if self.exc_info is None:
+                return self.result
+            else:
+                raise self.exc_info[0], self.exc_info[1], self.exc_info[2]
 
     def await(self):
         self.determination.wait()
-        return self.result
+        if self.exc_info is None:
+            return self.result
+        else:
+            raise self.exc_info[0], self.exc_info[1], self.exc_info[2]
 
     def await_result(self):
         return self.await()

@@ -95,15 +95,11 @@ def bind(d,f):
 #'a Def -> (f: 'a -> 'b) -> 'b Def
 def chain(d,f):
     """Return a deferred with the result of applying f to the result of d"""
-    d2 = Raw_Deferred(lambda d=d,f=f: f(d.result))
+    next_thunk = Raw_Deferred(lambda d=d,f=f: f(d.result))
     #using a callback does not exhaust threads waiting
-    d2.add_blocker(d)
-    d.add_callback(lambda v,d2=d2: _scheduler.submit_job(d2))
-    return d2
-#        n = Raw_Deferred(None)
-#        #this is OK because it runs inside the worker thread
-#        self.add_callback(lambda v=self : n.determine(f(v.result)))
-#        return n
+    next_thunk.add_blocker(d)
+    d.add_callback(next_thunk,_scheduler)
+    return next_thunk
 
 #'a Def list -> 'a list
 def await_all(deferreds): 
@@ -123,7 +119,7 @@ def await_first(deferreds):
         if not closure['result'].is_determined():
             closure['result'].determine(v)
     new_deferreds = [d.chain(lambda v: helper(v)) for d in deferreds]
-    return closure['result'].result()
+    return closure['result'].await()
 
 #'a Def -> 'b Def -> f('a->'b->'c) -> 'c
 def bind2(a,b,function):
@@ -203,7 +199,7 @@ def select(deferreds):
 def sleep(time):
     """block for a certain amount of time"""
     threading.sleep(time)
-    return defined(None)
+    return determined(None)
 
 def every(time,f):
     """run f at discrete intervals"""

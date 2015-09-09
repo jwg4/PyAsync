@@ -1,11 +1,12 @@
-import time,sys
+import time
+import sys
 import threading
 import Queue as SyncQueue
 
 #we absolutely want all instances of wasync.Scheduler to talk to the same concurrent.futures
 MIN_THREADS = 20
 MAX_THREADS = 500
-POLLING_CYCLE = 0.01
+POLLING_CYCLE = 0.001
 THREAD_COLLECTION_CYCLE = 15
 
 class Worker(threading.Thread):
@@ -16,6 +17,7 @@ class Worker(threading.Thread):
         self.scheduler = scheduler
 
     def run(self):
+        import time
         while self.running:
             if not self.wq.empty():
                 while not self.wq.empty():
@@ -49,6 +51,7 @@ class MainLoop(threading.Thread):
         self.context = context
 
     def run(self):
+        import time
         while self.context._running:
             #uncommenting the following is seriously spammy
             self.context.log("main loop: {0} slots, and {1} threads available".format(self.context._slots,self.context._idle_threads.qsize()))
@@ -76,7 +79,7 @@ class MainLoop(threading.Thread):
                     time.sleep(POLLING_CYCLE)
                     next
                 #exclude non-runnable jobs from the queue
-                if job.function != None and hasattr(job.function, '__call__'):
+                if job.function is not None and hasattr(job.function, '__call__'):
                     self.context.log("main loop: running a job in a thread")
                     self.context.run_job(job)
                 else:
@@ -115,7 +118,7 @@ class Scheduler():
         self.thread_collector = ThreadCollection(self,self._threads_to_collect)
         self.thread_collector.daemon = True
         self.thread_collector.start()
-        return self.loop
+        return self
 
     def shutdown(self):
         self.log("scheduler: shutting down")
@@ -127,14 +130,6 @@ class Scheduler():
     def submit_job(self,job):
         self._job_queue.put(job)
         self.log("scheduler: job submitted")
-
-    def after_job(self,result,job):
-        try:
-            job.determine(result)
-        except Exception as e:
-            print "Exception " + str(e) + " in module " + str(job.function.__module__) + ", function " + job.function.__name__
-            print str(job.function.__code__.co_filename) + ", line "  + str(job.function.__code__.co_firstlineno)
-            raise
 
     def adjust_slot_count(self,slot_count):
         #TODO: replace slots with semaphore
@@ -159,10 +154,13 @@ class Scheduler():
             self.adjust_slot_count(max(self._slots / 2, MIN_THREADS))
 
     def worker_function(self,job):
-        result = job.function()
-        self.after_job(result,job)
-#        self.log("job completed: {0}".format(job))
-        [callback(result) for callback in job.callbacks]
+        try:
+            result = job.function()
+            job.determine(result)
+            #callbacks are now deferred and can be managede by the scheduler
+            [self.submit_job(callback) for callback in job.callbacks]
+        except Exception as e:
+            job.determine_exception(sys.exc_info())
 
     def run_job(self,job):
         self.log("run_job: checking pool size")
