@@ -1,4 +1,3 @@
-# $Id: scheduler.py 37042 2014-08-18 13:37:07Z alanm $
 import time,sys
 import threading
 import Queue as SyncQueue

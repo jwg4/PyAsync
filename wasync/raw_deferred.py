@@ -1,4 +1,3 @@
-# $Id: raw_deferred.py 37196 2014-08-26 14:23:04Z alanm $
 import core
 import threading
 

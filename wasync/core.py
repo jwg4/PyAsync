@@ -1,4 +1,3 @@
-# $Id: core.py 37198 2014-08-26 14:35:50Z alanm $
 import threading
 import concurrent.futures        
 import Queue as Q

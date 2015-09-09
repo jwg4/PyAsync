@@ -1,4 +1,3 @@
-# $Id: network.py 35043 2014-05-12 16:10:37Z alanm $
 import socket as S
 from wasync import *
 from collections import namedtuple
