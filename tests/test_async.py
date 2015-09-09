@@ -1,4 +1,3 @@
-# $Id$
 import wasync
 from wasync import *
 import datetime as dt
