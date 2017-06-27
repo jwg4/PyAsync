@@ -50,5 +50,15 @@ class TestBasicFunctionality(unittest.TestCase):
         f2 = f1.chain(lambda x: x + 1)
         self.assertEqual(f2.await(),2)
 
+    def testBindOperator(self):
+        f1 = determined(1)
+        f2 = f1 |b| (lambda x: x + 1)
+        self.assertEqual(f2,2)
+
+    def testChainOperator(self):
+        f1 = determined(1)
+        f2 = f1 |c| (lambda x: x + 1)
+        self.assertEqual(f2.await(),2)
+
 if __name__ == '__main__':
     unittest.main()
