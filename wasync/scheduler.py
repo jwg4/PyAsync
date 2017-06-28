@@ -1,7 +1,10 @@
 import time
 import sys
 import threading
-import Queue as SyncQueue
+if sys.version_info >= (3,0):
+    import queue as SyncQueue
+else:
+    import Queue as SyncQueue
 
 #we absolutely want all instances of wasync.Scheduler to talk to the same concurrent.futures
 MIN_THREADS = 20
