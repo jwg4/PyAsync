@@ -1,6 +1,10 @@
 import threading
-import concurrent.futures        
-import Queue as Q
+import concurrent.futures  
+import sys      
+if sys.version_info >= (3,0):
+    import queue as Q
+else:
+    import Queue as Q
 import traceback
 import gc
 import scheduler
