@@ -61,14 +61,14 @@ class Raw_Deferred:
             if self.exc_info is None:
                 return self.result
             else:
-                raise self.exc_info[0], self.exc_info[1], self.exc_info[2]
+                raise (self.exc_info[0], self.exc_info[1], self.exc_info[2])
 
     def await(self):
         self.determination.wait()
         if self.exc_info is None:
             return self.result
         else:
-            raise self.exc_info[0], self.exc_info[1], self.exc_info[2]
+            raise (self.exc_info[0], self.exc_info[1], self.exc_info[2])
 
     def await_result(self):
         return self.await()
