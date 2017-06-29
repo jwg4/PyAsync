@@ -1,4 +1,3 @@
-import core
 import threading
 
 class Raw_Deferred:
@@ -74,7 +73,26 @@ class Raw_Deferred:
         return self.await()
 
     def bind(self,f):
-        return core.bind(self,f)
+        return bind(self,f)
 
     def chain(self,f):
-        return core.chain(self,f)
+        return chain(self,f)
+
+def await(d):
+    """Wait for a deferred to complete and return its value"""
+    return d.await_result()
+
+#'a Def -> (f: 'a -> 'b) -> 'b
+def bind(d,f):
+    """Apply f to the return value of d in a blocking fashion"""
+    return f(await(d))
+
+#'a Def -> (f: 'a -> 'b) -> 'b Def
+def chain(d,f):
+    """Return a deferred with the result of applying f to the result of d"""
+    next_thunk = Raw_Deferred(lambda d=d,f=f: f(d.result))
+    #using a callback does not exhaust threads waiting
+    next_thunk.add_blocker(d)
+    d.add_callback(next_thunk,_scheduler)
+    return next_thunk
+

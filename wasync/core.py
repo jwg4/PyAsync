@@ -9,7 +9,7 @@ import traceback
 import gc
 import scheduler
 import signal
-from raw_deferred import Raw_Deferred
+from raw_deferred import Raw_Deferred, await, bind, chain
 __version__ = '$Rev$'
 import sys
 
@@ -86,24 +86,6 @@ def auto_defer(o):
         else:
             r = determined(o)
     return r
-
-def await(d):
-    """Wait for a deferred to complete and return its value"""
-    return d.await_result()
-
-#'a Def -> (f: 'a -> 'b) -> 'b
-def bind(d,f):
-    """Apply f to the return value of d in a blocking fashion"""
-    return f(await(d))
-
-#'a Def -> (f: 'a -> 'b) -> 'b Def
-def chain(d,f):
-    """Return a deferred with the result of applying f to the result of d"""
-    next_thunk = Raw_Deferred(lambda d=d,f=f: f(d.result))
-    #using a callback does not exhaust threads waiting
-    next_thunk.add_blocker(d)
-    d.add_callback(next_thunk,_scheduler)
-    return next_thunk
 
 #'a Def list -> 'a list
 def await_all(deferreds): 
