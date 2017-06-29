@@ -1,4 +1,4 @@
-from .core import Infix, bind, chain, bind_all, bind_each, chain_all, chain_each, bind_or_apply
+from .core import *
 
 ## Here comes the syntactic sugar ##
 
