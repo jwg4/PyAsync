@@ -1,16 +1,15 @@
-import core
-from core import *
+from core import Infix
 import network 
 
 ## Here comes the syntactic sugar ##
 
-b = core.Infix(lambda a,f: bind(a,f))
-c = core.Infix(lambda a,f: chain(a,f))
-ba = core.Infix(lambda d,f: bind_all(d,f))
-be = core.Infix(lambda d,f: bind_each(d,f))
-ca = core.Infix(lambda d,f: chain_all(d,f))
-ce = core.Infix(lambda d,f: chain_each(d,f))
-boa = core.Infix(lambda d,f: bind_or_apply(d,f))
+b = Infix(lambda a,f: bind(a,f))
+c = Infix(lambda a,f: chain(a,f))
+ba = Infix(lambda d,f: bind_all(d,f))
+be = Infix(lambda d,f: bind_each(d,f))
+ca = Infix(lambda d,f: chain_all(d,f))
+ce = Infix(lambda d,f: chain_each(d,f))
+boa = Infix(lambda d,f: bind_or_apply(d,f))
 
 ## Only export these ##
 __all__ = [
