@@ -1,5 +1,4 @@
 import socket as S
-from wasync import *
 from collections import namedtuple
 __version__ = '$Rev$'
 

@@ -7,9 +7,9 @@ else:
     import Queue as Q
 import traceback
 import gc
-import scheduler
+from .scheduler import Scheduler, MIN_THREADS
 import signal
-from raw_deferred import Raw_Deferred, await, bind, chain
+from .raw_deferred import Raw_Deferred, await, bind, chain
 __version__ = '$Rev$'
 import sys
 
@@ -28,7 +28,7 @@ def shutdown_on_signal(signum=None,frame=None):
     """Signal handler function for shutting down"""
     shutdown()
 
-def go(threads = scheduler.MIN_THREADS, debug = None):
+def go(threads = MIN_THREADS, debug = None):
     """Start a Wasync scheduler"""
     global _scheduler 
     global _go_future
@@ -37,11 +37,11 @@ def go(threads = scheduler.MIN_THREADS, debug = None):
         signal.signal(signal.SIGALRM,shutdown_on_signal)
         signal.signal(signal.SIGHUP,shutdown_on_signal)
     if _scheduler is None:
-        _scheduler = scheduler.Scheduler(threads,debug)
+        _scheduler = Scheduler(threads,debug)
         _go_future = _scheduler.go(debug)
     return _go_future
 
-def never_returns(threads = scheduler.MIN_THREADS, debug = None):
+def never_returns(threads = MIN_THREADS, debug = None):
     """Start the Wasync scheduler and hang"""
     return go(threads,debug).result()
 
