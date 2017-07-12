@@ -13,9 +13,7 @@ from .raw_deferred import Raw_Deferred, await, bind, chain
 __version__ = '$Rev$'
 import sys
 
-
-_scheduler = None
-_go_future = None
+from .declare import _scheduler, _go_future
 
 def shutdown():
     """Gracefully close the Wasync scheduler and stop submitting new threads"""

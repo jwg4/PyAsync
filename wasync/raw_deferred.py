@@ -1,4 +1,5 @@
 import threading
+from .declare import _scheduler, _go_future
 
 class Raw_Deferred:
     """A unit of computation that runs in the background, which immediately returns a 
