@@ -1,5 +1,5 @@
 import threading
-from .declare import _scheduler, _go_future
+from . import declare
 
 class Raw_Deferred:
     """A unit of computation that runs in the background, which immediately returns a 
@@ -94,6 +94,6 @@ def chain(d,f):
     next_thunk = Raw_Deferred(lambda d=d,f=f: f(d.result))
     #using a callback does not exhaust threads waiting
     next_thunk.add_blocker(d)
-    d.add_callback(next_thunk,_scheduler)
+    d.add_callback(next_thunk,declare._scheduler)
     return next_thunk
 
