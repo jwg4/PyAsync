@@ -1,5 +1,6 @@
 PyAsync
 =======
+[![Build Status](https://travis-ci.org/jwg4/PyAsync.svg?branch=master)](https://travis-ci.org/jwg4/PyAsync)
 
 Monadic Asynchronous (deferred execution) library for python based on threading
 
