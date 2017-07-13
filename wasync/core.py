@@ -13,14 +13,13 @@ from .raw_deferred import Raw_Deferred, await, bind, chain
 __version__ = '$Rev$'
 import sys
 
-from .declare import _scheduler, _go_future
+import declare
 
 def shutdown():
     """Gracefully close the Wasync scheduler and stop submitting new threads"""
-    global _scheduler
-    if _scheduler is not None:
-        _scheduler.shutdown()
-    _scheduler = None
+    if declare._scheduler is not None:
+        declare._scheduler.shutdown()
+    declare._scheduler = None
 
 def shutdown_on_signal(signum=None,frame=None):
     """Signal handler function for shutting down"""
@@ -28,16 +27,14 @@ def shutdown_on_signal(signum=None,frame=None):
 
 def go(threads = MIN_THREADS, debug = None):
     """Start a Wasync scheduler"""
-    global _scheduler 
-    global _go_future
     signal.signal(signal.SIGINT,shutdown_on_signal)
     if sys.platform.startswith('linux'):
         signal.signal(signal.SIGALRM,shutdown_on_signal)
         signal.signal(signal.SIGHUP,shutdown_on_signal)
-    if _scheduler is None:
-        _scheduler = Scheduler(threads,debug)
-        _go_future = _scheduler.go(debug)
-    return _go_future
+    if declare._scheduler is None:
+        declare._scheduler = Scheduler(threads,debug)
+        declare._go_future = declare._scheduler.go(debug)
+    return declare._go_future
 
 def never_returns(threads = MIN_THREADS, debug = None):
     """Start the Wasync scheduler and hang"""
@@ -61,7 +58,7 @@ class Infix:
 def deferred(f=None):
     """Create a deferred operation"""
     d = Raw_Deferred(f)
-    _scheduler.submit_job(d)
+    declare._scheduler.submit_job(d)
     return d
 
 def determined(x):
