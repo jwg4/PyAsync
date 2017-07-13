@@ -4,3 +4,6 @@ python: 3.5
 
 script:
   nosetests
+
+notifications:
+  email: never

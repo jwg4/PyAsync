@@ -7,41 +7,36 @@ else:
     import Queue as Q
 import traceback
 import gc
-import scheduler
+from .scheduler import Scheduler, MIN_THREADS
 import signal
-from raw_deferred import Raw_Deferred
+from .raw_deferred import Raw_Deferred, await, bind, chain
 __version__ = '$Rev$'
 import sys
 
-
-_scheduler = None
-_go_future = None
+from . import declare
 
 def shutdown():
     """Gracefully close the Wasync scheduler and stop submitting new threads"""
-    global _scheduler
-    if _scheduler is not None:
-        _scheduler.shutdown()
-    _scheduler = None
+    if declare._scheduler is not None:
+        declare._scheduler.shutdown()
+    declare._scheduler = None
 
 def shutdown_on_signal(signum=None,frame=None):
     """Signal handler function for shutting down"""
     shutdown()
 
-def go(threads = scheduler.MIN_THREADS, debug = None):
+def go(threads = MIN_THREADS, debug = None):
     """Start a Wasync scheduler"""
-    global _scheduler 
-    global _go_future
     signal.signal(signal.SIGINT,shutdown_on_signal)
     if sys.platform.startswith('linux'):
         signal.signal(signal.SIGALRM,shutdown_on_signal)
         signal.signal(signal.SIGHUP,shutdown_on_signal)
-    if _scheduler is None:
-        _scheduler = scheduler.Scheduler(threads,debug)
-        _go_future = _scheduler.go(debug)
-    return _go_future
+    if declare._scheduler is None:
+        declare._scheduler = Scheduler(threads,debug)
+        declare._go_future = declare._scheduler.go(debug)
+    return declare._go_future
 
-def never_returns(threads = scheduler.MIN_THREADS, debug = None):
+def never_returns(threads = MIN_THREADS, debug = None):
     """Start the Wasync scheduler and hang"""
     return go(threads,debug).result()
 
@@ -63,7 +58,7 @@ class Infix:
 def deferred(f=None):
     """Create a deferred operation"""
     d = Raw_Deferred(f)
-    _scheduler.submit_job(d)
+    declare._scheduler.submit_job(d)
     return d
 
 def determined(x):
@@ -86,24 +81,6 @@ def auto_defer(o):
         else:
             r = determined(o)
     return r
-
-def await(d):
-    """Wait for a deferred to complete and return its value"""
-    return d.await_result()
-
-#'a Def -> (f: 'a -> 'b) -> 'b
-def bind(d,f):
-    """Apply f to the return value of d in a blocking fashion"""
-    return f(await(d))
-
-#'a Def -> (f: 'a -> 'b) -> 'b Def
-def chain(d,f):
-    """Return a deferred with the result of applying f to the result of d"""
-    next_thunk = Raw_Deferred(lambda d=d,f=f: f(d.result))
-    #using a callback does not exhaust threads waiting
-    next_thunk.add_blocker(d)
-    d.add_callback(next_thunk,_scheduler)
-    return next_thunk
 
 #'a Def list -> 'a list
 def await_all(deferreds): 
